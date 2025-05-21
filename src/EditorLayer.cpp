@@ -5,6 +5,7 @@ EditorLayer::EditorLayer(){
 }
 
 void EditorLayer::OnAttach(){
+    m_Console.AddLog("Starting");
     m_ActiveScene = CreateRef<Scene>();
 
     auto& floor = m_ActiveScene->CreateEntity("floor");
@@ -14,6 +15,11 @@ void EditorLayer::OnAttach(){
 }
 
 void EditorLayer::OnUpdate(Timestep ts){
+    if(m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f && 
+        (m_ActiveScene->m_Buffer->m_Width != m_ViewportSize.x || m_ActiveScene->m_Buffer->m_Height != m_ViewportSize.y)){
+
+            m_ActiveScene->m_Buffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+    }
     m_ActiveScene->OnUpdateEditor(ts);
 }
 
@@ -78,24 +84,24 @@ void EditorLayer::OnImGuiRender(){
             if (ImGui::MenuItem("New", "Ctrl+N"))
             {
                 // NewScene();
-                // console.AddLog("Open New Scene");
+                m_Console.AddLog("Open New Scene");
             }
 
             if (ImGui::MenuItem("Open...", "Ctrl+O"))
             {
                 // OpenScene();
-                // console.AddLog("Open Scene");
+                m_Console.AddLog("Open Scene");
             }
 
             if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
             {
                 // SaveScene();
-                // console.AddLog("Save Scene");
+                m_Console.AddLog("Save Scene");
             }                
 
             if (ImGui::MenuItem("Exit")){
-                // console.AddLog("Good bye");
-                // Application::Get().Close();
+                m_Console.AddLog("Good bye");
+                Application::Get().Close();
             }
 
             ImGui::EndMenu();
@@ -140,15 +146,19 @@ void EditorLayer::OnImGuiRender(){
 
         ImGui::EndMenuBar();
     }
+    m_SceneHierarchyPanel.OnImGuiRender();
+    m_ContentBrowserPanel.OnImGuiRender();
+    bool p_open = true;
+    m_Console.Draw("Console", &p_open);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
     ImGui::Begin("Viewport");
 
-    // auto viewportMinRegion = ImGui::GetWindowContentRegionMin();
-    // auto viewportMaxRegion = ImGui::GetWindowContentRegionMax();
-    // auto viewportOffset = ImGui::GetWindowPos();
-    // m_ViewportBounds[0] = { viewportMinRegion.x + viewportOffset.x, viewportMinRegion.y + viewportOffset.y };
-    // m_ViewportBounds[1] = { viewportMaxRegion.x + viewportOffset.x, viewportMaxRegion.y + viewportOffset.y };
+    auto viewportMinRegion = ImGui::GetWindowContentRegionMin();
+    auto viewportMaxRegion = ImGui::GetWindowContentRegionMax();
+    auto viewportOffset = ImGui::GetWindowPos();
+    m_ViewportBounds[0] = { viewportMinRegion.x + viewportOffset.x, viewportMinRegion.y + viewportOffset.y };
+    m_ViewportBounds[1] = { viewportMaxRegion.x + viewportOffset.x, viewportMaxRegion.y + viewportOffset.y };
 
     ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
     m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
