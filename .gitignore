@@ -1,3 +1,11 @@
+Build/
+Targets/
+.vscode/
+.cache/
+.vs/
+out/
+old/
+
 # Prerequisites
 *.d
 
