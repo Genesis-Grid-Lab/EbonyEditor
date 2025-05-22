@@ -11,10 +11,22 @@ void EditorLayer::OnAttach(){
     m_ActiveScene = CreateRef<Scene>();
     m_SceneHierarchyPanel = SceneHierarchyPanel(m_ActiveScene);
 
+    RaylibModelLoader loader;
+    RaylibModelLoader::LoadedModel result = loader.LoadFromFile("Resources/cube.fbx");
+
+    UE_CORE_INFO("after loader");
     auto& floor = m_ActiveScene->CreateEntity("floor");
     auto& floorPlane = floor.AddComponent<PlaneComponent>();
     floorPlane.Size = {32.0f, 32.0f};
     floorPlane.color = BLUE;
+
+    auto& sky = m_ActiveScene->CreateEntity("Sky");
+    sky.AddComponent<SkyboxComponent>().Skybox = SkyboxLoad("Resources/Textures/HDRs/skybox.png", NULL,
+                                                                    "Resources/Shaders/skybox.vs", "Resources/Shaders/skybox.fs",
+                                                                    "Resources/Shaders/cubemap.vs", "Resources/Shaders/cubemap.fs");
+
+    auto& cube = m_ActiveScene->CreateEntity("Cube");
+    cube.AddComponent<ModelComponent>().mModel = result.model;
 }
 
 void EditorLayer::OnUpdate(Timestep ts){
@@ -232,8 +244,8 @@ void EditorLayer::OnImGuiRender(){
         bool snap = IsKeyPressed(KEY_LEFT_CONTROL);
         float snapValue = (m_GizmoType == ImGuizmo::OPERATION::ROTATE) ? 45.0f : 0.5f;
         float snapValues[3] = { snapValue, snapValue, snapValue };
-        UE_CORE_INFO("Before manipulate");
-        PrintMatrix(transform);
+        // UE_CORE_INFO("Before manipulate");
+        // PrintMatrix(transform);
 
         ImGuizmo::Manipulate((float*)&cameraView, (float*)&cameraProjection,
                             (ImGuizmo::OPERATION)m_GizmoType, ImGuizmo::LOCAL,
@@ -245,9 +257,9 @@ void EditorLayer::OnImGuiRender(){
             Vector3 translation, rotation, scale;
             if(Math::DecomposeTransform(transform, &translation, &rotation, &scale))
             {
-                PrintVector3("Translation", translation);
-                PrintVector3("Roation", rotation);
-                PrintVector3("Scale", scale);
+                // PrintVector3("Translation", translation);
+                // PrintVector3("Roation", rotation);
+                // PrintVector3("Scale", scale);
             }  // <- Custom function
 
             Vector3 deltaRotation = Vector3Subtract(rotation, tc.Rotation);
@@ -255,8 +267,8 @@ void EditorLayer::OnImGuiRender(){
             tc.Rotation = Vector3Add(tc.Rotation, deltaRotation);
             tc.Scale = scale;            
         }
-        UE_CORE_INFO("After manipulate");
-        PrintMatrix(transform);
+        // UE_CORE_INFO("After manipulate");
+        // PrintMatrix(transform);
     }
 
     ImGui::End();
