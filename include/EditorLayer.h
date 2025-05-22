@@ -16,6 +16,8 @@ public:
     virtual void OnImGuiRender() override;
 
 private:
+    void Input();
+private:
     Ref<Scene> m_ActiveScene;
     Ref<Scene> m_EditorScene;
     ImVec2 m_ViewportBounds[2];
@@ -25,4 +27,6 @@ private:
     // Panels
     SceneHierarchyPanel m_SceneHierarchyPanel;
     ContentBrowserPanel m_ContentBrowserPanel;
+
+    int m_GizmoType = -1;
 };

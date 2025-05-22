@@ -121,6 +121,9 @@ namespace UE {
 			// 	auto& modcomp = entity.GetComponent<SphereShapeComponent>();												
 			// 	opened = ImGui::TreeNodeEx((void*)9817234, flags, "SphereShape");				
 			// }
+			if(entity.HasComponent<PlaneComponent>()){
+				opened = ImGui::TreeNodeEx((void*)9817234, flags, "Plane");
+			}
 			if (opened)
 				ImGui::TreePop();
 			ImGui::TreePop();
@@ -323,11 +326,11 @@ namespace UE {
 
 		DrawComponent<TransformComponent>("Transform", entity, [](auto& component)
 		{
-			// DrawVec3Control("Translation", component.Translation);
-			// glm::vec3 rotation = glm::degrees(component.Rotation);
-			// DrawVec3Control("Rotation", rotation);
+			DrawVec3Control("Translation", component.Translation);
+			// glm::vec3 rotation = glm::degrees();
+			DrawVec3Control("Rotation", component.Rotation);
 			// component.Rotation = glm::radians(rotation);
-			// DrawVec3Control("Scale", component.Scale, 1.0f);
+			DrawVec3Control("Scale", component.Scale, 1.0f);
 		});
 
 		// DrawComponent<CameraComponent>("Camera", entity, [](auto& component)

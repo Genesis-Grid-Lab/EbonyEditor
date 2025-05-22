@@ -1,4 +1,6 @@
 #include "EditorLayer.h"
+#include <ImGuizmo.h>
+#include <raymath.h>
 
 EditorLayer::EditorLayer(){
 
@@ -7,6 +9,7 @@ EditorLayer::EditorLayer(){
 void EditorLayer::OnAttach(){
     m_Console.AddLog("Starting");
     m_ActiveScene = CreateRef<Scene>();
+    m_SceneHierarchyPanel = SceneHierarchyPanel(m_ActiveScene);
 
     auto& floor = m_ActiveScene->CreateEntity("floor");
     auto& floorPlane = floor.AddComponent<PlaneComponent>();
@@ -21,6 +24,41 @@ void EditorLayer::OnUpdate(Timestep ts){
             m_ActiveScene->m_Buffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
     }
     m_ActiveScene->OnUpdateEditor(ts);
+    Input();
+}
+
+void EditorLayer::Input(){
+
+    if(IsKeyPressed(KEY_Q)){
+        if(!ImGuizmo::IsUsing())
+            m_GizmoType = -1;
+    }
+    if(IsKeyPressed(KEY_W)){
+        if (!ImGuizmo::IsUsing())
+            m_GizmoType = ImGuizmo::OPERATION::TRANSLATE;
+    }
+    if(IsKeyPressed(KEY_E)){
+        if (!ImGuizmo::IsUsing())
+            m_GizmoType = ImGuizmo::OPERATION::ROTATE;    
+    }
+    if(IsKeyPressed(KEY_R)){
+        if (!ImGuizmo::IsUsing())
+            m_GizmoType = ImGuizmo::OPERATION::SCALE;
+    }
+}
+
+void PrintMatrix(const Matrix& mat)
+{
+    UE_CORE_WARN("Matrix:\n");
+    UE_CORE_WARN("{} {} {} {}\n", mat.m0, mat.m4, mat.m8,  mat.m12);
+    UE_CORE_WARN("{} {} {} {}\n", mat.m1, mat.m5, mat.m9,  mat.m13);
+    UE_CORE_WARN("{} {} {} {}\n", mat.m2, mat.m6, mat.m10, mat.m14);
+    UE_CORE_WARN("{} {} {} {}\n", mat.m3, mat.m7, mat.m11, mat.m15);
+}
+
+void PrintVector3(const char* name, const Vector3& v)
+{
+    UE_CORE_WARN("{}: ({}, {}, {})\n", name, v.x, v.y, v.z);
 }
 
 void EditorLayer::OnImGuiRender(){
@@ -165,6 +203,61 @@ void EditorLayer::OnImGuiRender(){
 
     ImTextureID Frame = (ImTextureID)&m_ActiveScene->m_Buffer->GetTexture().texture;
     ImGui::Image(Frame, ImVec2{m_ViewportSize.x, m_ViewportSize.y}, ImVec2{0, 1}, ImVec2{1, 0});
+
+    // dragging
+
+    // Gizmos
+    Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
+    if (selectedEntity && m_GizmoType != -1)
+    {
+        
+        ImGuizmo::SetOrthographic(false);
+        ImGuizmo::SetDrawlist();
+
+        ImGuizmo::SetRect(m_ViewportBounds[0].x, m_ViewportBounds[0].y,
+                        m_ViewportBounds[1].x - m_ViewportBounds[0].x,
+                        m_ViewportBounds[1].y - m_ViewportBounds[0].y);
+
+        // === Editor camera ===
+        // Assuming m_EditorCamera is a raylib Camera3D
+        Matrix cameraProjection = MatrixTranspose(Math::GetCameraProjectionMatrix(m_ActiveScene->camera, m_ViewportSize.x, m_ViewportSize.y));  // <- Custom function
+        Matrix cameraView = MatrixTranspose(Math::GetCameraViewMatrix(m_ActiveScene->camera));              // <- Custom function
+
+        // === Entity transform ===
+        auto& tc = selectedEntity.GetComponent<TransformComponent>();
+        Matrix transform = Math::GetTransformMatrix(tc);  // <- Custom function to build raylib Matrix from Translation/Rotation/Scale
+        Matrix imguizmoMatrix = MatrixTranspose(transform);
+        
+        // === Snapping ===
+        bool snap = IsKeyPressed(KEY_LEFT_CONTROL);
+        float snapValue = (m_GizmoType == ImGuizmo::OPERATION::ROTATE) ? 45.0f : 0.5f;
+        float snapValues[3] = { snapValue, snapValue, snapValue };
+        UE_CORE_INFO("Before manipulate");
+        PrintMatrix(transform);
+
+        ImGuizmo::Manipulate((float*)&cameraView, (float*)&cameraProjection,
+                            (ImGuizmo::OPERATION)m_GizmoType, ImGuizmo::LOCAL,
+                            (float*)&imguizmoMatrix, nullptr, snap ? snapValues : nullptr);
+
+        if (ImGuizmo::IsUsing())
+        {            
+            transform = MatrixTranspose(imguizmoMatrix);
+            Vector3 translation, rotation, scale;
+            if(Math::DecomposeTransform(transform, &translation, &rotation, &scale))
+            {
+                PrintVector3("Translation", translation);
+                PrintVector3("Roation", rotation);
+                PrintVector3("Scale", scale);
+            }  // <- Custom function
+
+            Vector3 deltaRotation = Vector3Subtract(rotation, tc.Rotation);
+            tc.Translation = translation;
+            tc.Rotation = Vector3Add(tc.Rotation, deltaRotation);
+            tc.Scale = scale;            
+        }
+        UE_CORE_INFO("After manipulate");
+        PrintMatrix(transform);
+    }
 
     ImGui::End();
     ImGui::PopStyleVar();
